@@ -10,23 +10,63 @@ the material bottom-up, starting with mathematical abstractions like phasors.
 With a programming-based approach, I can go top-down, which means I can present the most important
 ideas right away.  By the end of the first chapter, you can break down a sound into its harmonics, modify the harmonics, and generate new sounds.
 
+Here's a notebook that previews what you will see in Chapter 1:
+
+* [chap01preview.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap01preview.ipynb)
+
+And if you want to see where were headed, here's a preview of Chapter 10:
+
+* [chap10preview.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap10preview.ipynb)
+
+
 ## Running the code
 
 Most of the code for this book is in Jupyter notebooks.
 If you are not familiar with Jupyter, you can run a tutorial by [clicking here](https://jupyter.org/try).  Then select "Try Classic Notebook".  It will open a notebook with instructions for getting started.
 
-To run the ThinkDSP code, you have two options:
+To run the ThinkDSP code, you have three options:
 
-1. The simplest option is to run the code on Binder.  The drawback is that the notebooks run in a temporary environment; if you leave a notebook idle for a while, the temporary environment goes away and you lose any changes you made.
+Option 1: Run the notebooks on Google Colab.
 
-2. The other option is to install Python, Jupyter, and the other packages you need on your computer, and download my code from GitHub.
+Option 2: Run the notebooks on Binder.
 
-The following two sections explain these options in detail.
+Option 3: Install Jupyter on your computer and run the notebooks locally.
+
+The following sections explain these options in detail.
 
 Note: I have heard from a few people who tried to run the code in Spyder.  Apparently there were problems, so I don't recommend it.
 
+### Option 1: Run on Colab
 
-### Option 1: Run on Binder
+I have recently updated most of the notebooks in this repository so they run on Colab.
+
+You can open any of them by clicking on the links below.  If you want to modify and save any of them, you can use Colab to save a copy in a Google Drive or your own GitHub repo, or on your computer.
+
+* [chap01.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap01.ipynb)
+* [chap01soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap01soln.ipynb)
+* [chap02.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap02.ipynb)
+* [chap02soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap02soln.ipynb)
+* [chap03.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap03.ipynb)
+* [chap03soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap03soln.ipynb)
+* [chap04.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap04.ipynb)
+* [chap04soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap04soln.ipynb)
+* [chap05.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap05.ipynb)
+* [chap05soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap05soln.ipynb)
+* [chap06.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap06.ipynb)
+* [chap06soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap06soln.ipynb)
+* [chap07.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap07.ipynb)
+* [chap07soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap07soln.ipynb)
+* [chap08.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap08.ipynb)
+* [chap08soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap08soln.ipynb)
+* [chap09.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap09.ipynb)
+* [chap09soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap09soln.ipynb)
+* [chap10.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap10.ipynb)
+* [chap10soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap10soln.ipynb)
+* [chap11.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap11.ipynb)
+* [chap11soln.ipynb](https://colab.research.google.com/github/AllenDowney/ThinkDSP/blob/master/code/chap11soln.ipynb)
+
+
+### Option 2: Run on Binder
 
 To run the code for this book on Binder, press this button:
 
@@ -35,7 +75,7 @@ To run the code for this book on Binder, press this button:
 It takes a minute or so to start up, but then you should see the Jupyter home page with a list of files.  Click on `code` to open the folder with the notebooks, then click on one of the notebooks (with the .ipynb extension).
 
 
-### Option 2: Install Python+Jupyter
+### Option 3: Install Python+Jupyter
 
 First, download the files from this repository.  If you are a Git user, you can run
 
@@ -51,7 +91,7 @@ user-level install, it will not interfere with other Python installations.
 
 [Information about installing Anaconda is here](https://www.anaconda.com/distribution/).
 
-If you have the choice of Python 2 or 3, choose 3.
+If you have the choice of Python 2 or 3, choose Python 3.
 
 There are two ways to get the packages you need for ThinkDSP.  You can install them by hand or create a Conda environment.
 

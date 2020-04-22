@@ -5,9 +5,6 @@ Copyright 2013 Allen B. Downey
 License: GNU GPLv3 http://www.gnu.org/licenses/gpl.html
 """
 
-from __future__ import print_function, division
-
-import array
 import copy
 import math
 
@@ -16,15 +13,14 @@ import random
 import scipy
 import scipy.stats
 import scipy.fftpack
-import struct
 import subprocess
-import thinkplot
 import warnings
 
 from fractions import gcd
 from wave import open as open_wave
+from scipy.io import wavfile
 
-import matplotlib.pyplot as pyplot
+import matplotlib.pyplot as plt
 
 try:
     from IPython.display import Audio
@@ -123,6 +119,27 @@ def read_wave(filename="sound.wav"):
     # if it's in stereo, just pull out the first channel
     if nchannels == 2:
         ys = ys[::2]
+
+    # ts = np.arange(len(ys)) / framerate
+    wave = Wave(ys, framerate=framerate)
+    wave.normalize()
+    return wave
+
+
+def read_wave_with_scipy(filename):
+    """Reads a wave file.
+
+    filename: string
+
+    returns: Wave
+    """
+    # TODO: Check back later and see if this works on 24-bit data,
+    # and runs without throwing warnings.
+    framerate, ys = wavfile.read(filename)
+
+    # if it's in stereo, just pull out the first channel
+    if ys.ndim == 2:
+        ys = ys[:, 0]
 
     # ts = np.arange(len(ys)) / framerate
     wave = Wave(ys, framerate=framerate)
@@ -252,10 +269,10 @@ class _SpectrumParent:
         """
         if self.full:
             fs, amps = self.render_full(high)
-            thinkplot.plot(fs, amps, **options)
+            plt.plot(fs, amps, **options)
         else:
             i = None if high is None else find_index(high, self.fs)
-            thinkplot.plot(self.fs[:i], self.amps[:i], **options)
+            plt.plot(self.fs[:i], self.amps[:i], **options)
 
     def plot_power(self, high=None, **options):
         """Plots power vs frequency.
@@ -264,10 +281,10 @@ class _SpectrumParent:
         """
         if self.full:
             fs, amps = self.render_full(high)
-            thinkplot.plot(fs, amps ** 2, **options)
+            plt.plot(fs, amps ** 2, **options)
         else:
             i = None if high is None else find_index(high, self.fs)
-            thinkplot.plot(self.fs[:i], self.power[:i], **options)
+            plt.plot(self.fs[:i], self.power[:i], **options)
 
     def estimate_slope(self):
         """Runs linear regression on log power vs log frequency.
@@ -416,7 +433,9 @@ class Spectrum(_SpectrumParent):
         returns: new Spectrum
         """
         new = self.copy()
-        new.hs /= PI2 * 1j * new.fs
+        zero = (new.fs == 0)
+        new.hs[~zero] /= PI2 * 1j * new.fs[~zero]
+        new.hs[zero] = np.inf
         return new
 
     def make_integrated_spectrum(self):
@@ -467,7 +486,7 @@ class IntegratedSpectrum:
         if expo:
             cs = np.exp(cs)
 
-        thinkplot.plot(fs, cs, **options)
+        plt.plot(fs, cs, **options)
 
     def estimate_slope(self, low=1, high=-12000):
         """Runs linear regression on log cumulative power vs log frequency.
@@ -585,7 +604,8 @@ class Spectrogram:
             spectrum = self.spec_map[t]
             array[:, j] = spectrum.amps[:i]
 
-        thinkplot.pcolor(ts, fs, array, **options)
+        underride(options, cmap='inferno_r')
+        plt.pcolor(ts, fs, array, **options)
 
     def make_wave(self):
         """Inverts the spectrogram and returns a Wave.
@@ -904,6 +924,9 @@ class Wave:
     def make_spectrum(self, full=False):
         """Computes the spectrum using FFT.
 
+        full: boolean, whethere to compute a full FFT
+              (as opposed to a real FFT)
+
         returns: Spectrum
         """
         n = len(self.ys)
@@ -967,16 +990,18 @@ class Wave:
     def plot(self, **options):
         """Plots the wave.
 
+        If the ys are complex, plots the real part.
+
         """
         xfactor = self.get_xfactor(options)
-        thinkplot.plot(self.ts * xfactor, self.ys, **options)
+        plt.plot(self.ts * xfactor, np.real(self.ys), **options)
 
     def plot_vlines(self, **options):
         """Plots the wave with vertical lines for samples.
 
         """
         xfactor = self.get_xfactor(options)
-        thinkplot.vlines(self.ts * xfactor, 0, self.ys, **options)
+        plt.vlines(self.ts * xfactor, 0, self.ys, **options)
 
     def corr(self, other):
         """Correlation coefficient two waves.
@@ -1457,6 +1482,7 @@ class TriangleSignal(Sinusoid):
         ys = normalize(unbias(ys), self.amp)
         return ys
 
+from scipy.integrate import cumtrapz
 
 class Chirp(Signal):
     """Represents a signal with variable frequency."""
@@ -1483,23 +1509,33 @@ class Chirp(Signal):
     def evaluate(self, ts):
         """Evaluates the signal at the given times.
 
+        Note: This version is a little more complicated than the one
+        in the book because it handles the case where the ts are
+        not equally spaced.
+
         ts: float array of times
 
         returns: float wave array
         """
-        freqs = np.linspace(self.start, self.end, len(ts) - 1)
-        return self._evaluate(ts, freqs)
+        def interpolate(ts, f0, f1):
+            t0, t1 = ts[0], ts[-1]
+            return f0 + (f1 - f0) * (ts - t0) / (t1 - t0)
 
-    def _evaluate(self, ts, freqs):
-        """Helper function that evaluates the signal.
+        # compute the frequencies
+        ts = np.asarray(ts)
+        freqs = interpolate(ts, self.start, self.end)
 
-        ts: float array of times
-        freqs: float array of frequencies during each interval
-        """
-        dts = np.diff(ts)
-        dps = PI2 * freqs * dts
-        phases = np.cumsum(dps)
-        phases = np.insert(phases, 0, 0)
+        # compute the time intervals
+        dts = np.diff(ts, append=ts[-1])
+
+        # compute the changes in phase
+        dphis = PI2 * freqs * dts
+        dphis = np.roll(dphis, 1)
+
+        # compute phase
+        phases = np.cumsum(dphis)
+
+        # compute the amplitudes
         ys = self.amp * np.cos(phases)
         return ys
 
@@ -1514,9 +1550,13 @@ class ExpoChirp(Chirp):
 
         returns: float wave array
         """
-        start, end = np.log10(self.start), np.log10(self.end)
-        freqs = np.logspace(start, end, len(ts) - 1)
-        return self._evaluate(ts, freqs)
+        f0, f1 = np.log10(self.start), np.log10(self.end)
+        freqs = np.logspace(f0, f1, len(ts))
+        dts = np.diff(ts, prepend=0)
+        dphis = PI2 * freqs * dts
+        phases = np.cumsum(dphis)
+        ys = self.amp * np.cos(phases)
+        return ys
 
 
 class SilentSignal(Signal):
@@ -1552,7 +1592,7 @@ class Impulses(Signal):
         return ys
 
 
-class _Noise(Signal):
+class Noise(Signal):
     """Represents a noise signal (abstract parent class)."""
 
     def __init__(self, amp=1.0):
@@ -1571,7 +1611,7 @@ class _Noise(Signal):
         return ValueError("Non-periodic signal.")
 
 
-class UncorrelatedUniformNoise(_Noise):
+class UncorrelatedUniformNoise(Noise):
     """Represents uncorrelated uniform noise."""
 
     def evaluate(self, ts):
@@ -1585,7 +1625,7 @@ class UncorrelatedUniformNoise(_Noise):
         return ys
 
 
-class UncorrelatedGaussianNoise(_Noise):
+class UncorrelatedGaussianNoise(Noise):
     """Represents uncorrelated gaussian noise."""
 
     def evaluate(self, ts):
@@ -1599,7 +1639,7 @@ class UncorrelatedGaussianNoise(_Noise):
         return ys
 
 
-class BrownianNoise(_Noise):
+class BrownianNoise(Noise):
     """Represents Brownian noise, aka red noise."""
 
     def evaluate(self, ts):
@@ -1619,7 +1659,7 @@ class BrownianNoise(_Noise):
         return ys
 
 
-class PinkNoise(_Noise):
+class PinkNoise(Noise):
     """Represents Brownian noise, aka red noise."""
 
     def __init__(self, amp=1.0, beta=1.0):
@@ -1760,6 +1800,81 @@ def zero_pad(array, n):
     return res
 
 
+def decorate(**options):
+    """Decorate the current axes.
+
+    Call decorate with keyword arguments like
+
+    decorate(title='Title',
+             xlabel='x',
+             ylabel='y')
+
+    The keyword arguments can be any of the axis properties
+
+    https://matplotlib.org/api/axes_api.html
+
+    In addition, you can use `legend=False` to suppress the legend.
+
+    And you can use `loc` to indicate the location of the legend
+    (the default value is 'best')
+    """
+    loc = options.pop("loc", "best")
+    if options.pop("legend", True):
+        legend(loc=loc)
+
+    plt.gca().set(**options)
+    plt.tight_layout()
+
+
+def legend(**options):
+    """Draws a legend only if there is at least one labeled item.
+
+    options are passed to plt.legend()
+    https://matplotlib.org/api/_as_gen/matplotlib.plt.legend.html
+
+    """
+    underride(options, loc="best", frameon=False)
+
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(handles, labels, **options)
+
+
+def remove_from_legend(bad_labels):
+    """Removes some labels from the legend.
+
+    bad_labels: sequence of strings
+    """
+    ax = plt.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    handle_list, label_list = [], []
+    for handle, label in zip(handles, labels):
+        if label not in bad_labels:
+            handle_list.append(handle)
+            label_list.append(label)
+    ax.legend(handle_list, label_list)
+
+
+def underride(d, **options):
+    """Add key-value pairs to d only if key is not in d.
+
+    If d is None, create a new dictionary.
+
+    d: dictionary
+    options: keyword args to add to d
+    """
+    if d is None:
+        d = {}
+
+    for key, val in options.items():
+        d.setdefault(key, val)
+
+    return d
+
+
+
+
 def main():
 
     cos_basis = cos_wave(440)
@@ -1790,7 +1905,7 @@ def main():
 
     signal = GlottalSignal(440)
     signal.plot()
-    pyplot.show()
+    plt.show()
     return
 
     wfile = WavFileWriter()
